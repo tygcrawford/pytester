@@ -8,6 +8,7 @@ class TestResults:
     errPredicted = None
     long = None
     testEval = None
+    error = None
 
     def __init__(self, name):
         self.name = name
@@ -18,7 +19,7 @@ class TestResults:
         predictedStr = "Yes" if self.errPredicted else "No "
 
         if(self.long):
-            message =  "\'%s\' Test[%i]:\n" % (self.name, self.index)
+            message = "\'%s\' Test[%i]:\n" % (self.name, self.index)
             message += "\tErrors: %s\n" % (errorStr)
             message += "\tPassed: %s\n" % (self.passed)
             message += "\tArg: %s\n" % (str(self.args))
@@ -26,16 +27,20 @@ class TestResults:
             if(self.errorName is None):
                 message += "\tReal Eval: %s\n" % (str(self.realEval))
                 if self.testEval:
-                    message += "\tIntended Eval: %s\n" % (str(self.intendedEval))
+                    string = "\tIntended Eval: %s\n"
+                    message += string % (str(self.intendedEval))
             else:
                 if self.testEval:
-                    message += "\tIntended Eval: %s\n" % (str(self.intendedEval))
+                    string = "\tIntended Eval: %s\n"
+                    message += string % (str(self.intendedEval))
                     message += "\tError Predicted: %s\n" % (predictedStr)
                 message += "\tError Name: %s\n" % (self.errorName)
 
         else:
-            message = "\'%s\' Test[%i]%sErrors: %s%sPassed: %s%sArg: %s%s"
-            message = message % (self.name, self.index, d, errorStr, d, self.passed, d, str(self.args), d)
+            message = "\'%s\' Test[%i]%sErrors: %s%s"
+            message = message % (self.name, self.index, d, errorStr, d)
+            string = "Passed: %s%sArg: %s%s"
+            message += string % (self.passed, d, str(self.args), d)
 
             if(self.errorName is None):
                 message += "Real Eval: %s%s" % (str(self.realEval), d)

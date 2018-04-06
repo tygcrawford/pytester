@@ -4,30 +4,40 @@ from pytester.test_results import TestResults
 from termcolor import cprint
 from pytester.error_object import ErrorObject
 
-#write in an array string deconstructor so you can take in stuff like that from files so you can test an object
-#this allows for larger test batches and even construction of test batches with other python scripts
+# Build TestArguments function that takes in a dictionary
+# Rename vars
+
 
 class Test:
     args = []
     argEval = []
     nextIndex = 0
 
-    def __init__(self, function, args, argEval = None, name = "New", long = False, consoleOutput = True):
-        self.testEval = False if argEval is None else True
+    def __init__(self, function, args, argEval=None,
+                 name="New", long=False, consoleOutput=True,
+                 print_errors=False):
         self.long = long
+        self.print_errors = print_errors
+        self.testEval = False if argEval is None else True
         self.function = function
         self.args = args
         self.argEval = argEval
-        self.name = name
         self.size = len(args)
-        self.lagestArg = reduce(lambda x, y: x if x >= y else y, map(lambda x: len(str(x)), self.args))
+        reducer = lambda x, y: x if x >= y else y
+        mapper = lambda x: len(str(x))
+        self.lagestArg = reduce(reducer, map(mapper, self.args))
+        self.argsString = " , ".join(getargspec(self.function).args)
         self.results = [None] * self.size
         self.errors = [None] * self.size
+        self.name = name
         self.consoleOutput = consoleOutput
 
         if self.consoleOutput:
             print("\nNew Test \'%s\' Created" % (self.name))
-            print("Function: %s ( %s )\n" % (self.function.__name__, " , ".join(getargspec(self.function).args)))
+            message = "Function: %s ( %s )\n"
+            messageArgs = (self.function.__name__, self.argsString)
+            message = message % messageArgs
+            print(message)
 
     def getTestsCompleted(self):
         countDone = 0
@@ -58,7 +68,6 @@ class Test:
             testOut = TestResults(self.name)
             error = self.getErrors(index)
 
-
             testOut.testEval = self.testEval
             testOut.long = self.long
             testOut.index = index
@@ -74,13 +83,16 @@ class Test:
                 else:
                     testOut.passed = True
             else:
+                testOut.error = True
                 self.errors[index] = error
                 testOut.errorName = error.name
                 try:
-                    testOut.passed = self.argEval[index].__name__ == testOut.errorName
+                    passedErrorName = self.argEval[index].__name__
+                    testOut.passed = passedErrorName == testOut.errorName
                     if(testOut.passed):
                         testOut.errPredicted = True
-                except: # (TypeError, AttributeError) as e: <- if broken
+                # (TypeError, AttributeError) as e: <- if broken
+                except Exception:
                     testOut.passed = False
 
             self.results[index] = testOut
@@ -94,6 +106,8 @@ class Test:
                     print(testOut)
                 else:
                     cprint(testOut, 'red')
+                if self.print_errors and testOut.error:
+                    self.printError(self.nextIndex)
             self.nextIndex += 1
             countDone = self.getTestsCompleted()
             if countDone == self.size and self.consoleOutput:
@@ -106,6 +120,8 @@ class Test:
 
         except IndexError:
             raise IndexError("You have already tested all args provided")
+        except Exception as e:
+            raise e
 
     def allResults(self):
         passedAll = True
@@ -116,13 +132,15 @@ class Test:
             else:
                 output = self.results[i]
 
-            if output.passed == False:
-                passedAll = False
+            passedAll = not output.passed
             if self.consoleOutput:
                 if(output.passed):
                     print(output)
                 else:
                     cprint(output, 'red')
+                if self.print_errors and output.error:
+                    self.printError(i)
+
         if self.consoleOutput:
             self.endPrint()
             return passedAll
@@ -138,10 +156,16 @@ class Test:
                 passedAll = False
 
         if passedAll:
-            message = "\nAll tests have been ran and the function \'%s\' has passed all tests!\n"
+            message = (
+                "\nAll tests have been ran and the "
+                "function \'%s\' has passed all tests!\n"
+            )
             cprint(message % self.name, 'green', attrs=['bold'])
         else:
-            message = "\nAll tests have been ran and the function \'%s\' has failed %i tests!\n"
+            message = (
+                "\nAll tests have been ran and the "
+                "function \'%s\' has failed %i tests!\n"
+            )
             cprint(message % (self.name, notPassed), 'red', attrs=['bold'])
 
     def printError(self, index):
