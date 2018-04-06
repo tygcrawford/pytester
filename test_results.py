@@ -26,12 +26,12 @@ class TestResults:
             if(self.errorName is None):
                 message += "\tReal Eval: %s\n" % (str(self.realEval))
                 if self.testEval:
-                    message += "\tIntended Eval: %s" % (str(self.intendedEval))
+                    message += "\tIntended Eval: %s\n" % (str(self.intendedEval))
             else:
                 if self.testEval:
                     message += "\tIntended Eval: %s\n" % (str(self.intendedEval))
                     message += "\tError Predicted: %s\n" % (predictedStr)
-                message += "\tError Name: %s" % (self.errorName)
+                message += "\tError Name: %s\n" % (self.errorName)
 
         else:
             message = "\'%s\' Test[%i]%sErrors: %s%sPassed: %s%sArg: %s%s"

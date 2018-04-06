@@ -2,6 +2,7 @@ from functools import reduce
 from inspect import getargspec
 from pytester.test_results import TestResults
 from termcolor import cprint
+from pytester.error_object import ErrorObject
 
 #write in an array string deconstructor so you can take in stuff like that from files so you can test an object
 #this allows for larger test batches and even construction of test batches with other python scripts
@@ -21,6 +22,7 @@ class Test:
         self.size = len(args)
         self.lagestArg = reduce(lambda x, y: x if x >= y else y, map(lambda x: len(str(x)), self.args))
         self.results = [None] * self.size
+        self.errors = [None] * self.size
         self.consoleOutput = consoleOutput
 
         if self.consoleOutput:
@@ -43,12 +45,11 @@ class Test:
             return self.function(arg)
 
     def getErrors(self, index):
-        error = None
         try:
             self.results[index] = self.runFunction(index)
         except Exception as e:
-            error = type(e).__name__
-        return error
+            return ErrorObject(e, index, self.name, self.args[index])
+        return None
 
     def test(self, index):
         if(self.results[index] is not None):
@@ -56,6 +57,7 @@ class Test:
         else:
             testOut = TestResults(self.name)
             error = self.getErrors(index)
+
 
             testOut.testEval = self.testEval
             testOut.long = self.long
@@ -72,7 +74,8 @@ class Test:
                 else:
                     testOut.passed = True
             else:
-                testOut.errorName = error
+                self.errors[index] = error
+                testOut.errorName = error.name
                 try:
                     testOut.passed = self.argEval[index].__name__ == testOut.errorName
                     if(testOut.passed):
@@ -83,9 +86,6 @@ class Test:
             self.results[index] = testOut
             return testOut
 
-    def printTest(self, index):
-        print(self.test(index))
-
     def next(self):
         try:
             testOut = self.test(self.nextIndex)
@@ -93,7 +93,7 @@ class Test:
                 if(testOut.passed and self.consoleOutput):
                     print(testOut)
                 else:
-                    colored(testOut, 'red')
+                    cprint(testOut, 'red')
             self.nextIndex += 1
             countDone = self.getTestsCompleted()
             if countDone == self.size and self.consoleOutput:
@@ -116,13 +116,13 @@ class Test:
             else:
                 output = self.results[i]
 
-            if(output.passed == False):
+            if output.passed == False:
                 passedAll = False
             if self.consoleOutput:
                 if(output.passed):
                     print(output)
                 else:
-                    cprint(output, 'red', attrs=['bold'])
+                    cprint(output, 'red')
         if self.consoleOutput:
             self.endPrint()
             return passedAll
@@ -138,8 +138,20 @@ class Test:
                 passedAll = False
 
         if passedAll:
-            message = "\nAll tests have been ran and the function \'%s\' has passed all tests!"
+            message = "\nAll tests have been ran and the function \'%s\' has passed all tests!\n"
             cprint(message % self.name, 'green', attrs=['bold'])
         else:
-            message = "\nAll tests have been ran and the function \'%s\' has failed %i tests!"
+            message = "\nAll tests have been ran and the function \'%s\' has failed %i tests!\n"
             cprint(message % (self.name, notPassed), 'red', attrs=['bold'])
+
+    def printError(self, index):
+        if self.errors[index] is None:
+            print("There is no error for this test.\n")
+        else:
+            cprint(self.errors[index], 'red')
+
+    def resultsCompleted(self):
+        for i in self.results:
+            if i is None:
+                return False
+        return True
